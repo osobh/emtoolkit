@@ -1,0 +1,22 @@
+[package]
+name = "em-core"
+description = "Shared mathematics for electromagnetic simulations: complex arithmetic, coordinate transforms, special functions, physical constants, unit conversions"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["electromagnetics", "physics", "complex", "coordinates", "constants"]
+categories = ["science", "mathematics"]
+
+[dependencies]
+nalgebra = { workspace = true }
+num-complex = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+approx = { workspace = true }
+serde_json = { workspace = true }
