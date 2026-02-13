@@ -154,7 +154,16 @@ dependencies = [
 name = "em-wasm"
 version = "0.1.0"
 dependencies = [
+ "em-antennas",
  "em-core",
+ "em-electrostatics",
+ "em-magnetostatics",
+ "em-propagation",
+ "em-timevarying",
+ "em-transmission",
+ "em-vectors",
+ "em-waves",
+ "num-complex",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",

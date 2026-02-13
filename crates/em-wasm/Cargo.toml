@@ -10,10 +10,19 @@ repository.workspace = true
 
 [dependencies]
 em-core = { path = "../em-core" }
+em-waves = { path = "../em-waves" }
+em-transmission = { path = "../em-transmission" }
+em-vectors = { path = "../em-vectors" }
+em-electrostatics = { path = "../em-electrostatics" }
+em-magnetostatics = { path = "../em-magnetostatics" }
+em-timevarying = { path = "../em-timevarying" }
+em-propagation = { path = "../em-propagation" }
+em-antennas = { path = "../em-antennas" }
 wasm-bindgen = { workspace = true }
 serde = { workspace = true }
 serde-wasm-bindgen = { workspace = true }
 serde_json = { workspace = true }
+num-complex = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
