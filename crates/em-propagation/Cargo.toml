@@ -1,0 +1,20 @@
+[package]
+name = "em-propagation"
+description = "Chapter 7: Plane-Wave Propagation — polarization, Snell's law, Fresnel coefficients, skin depth"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["plane-wave", "polarization", "fresnel", "snell", "electromagnetics"]
+categories = ["science", "simulation"]
+
+[dependencies]
+em-core = { path = "../em-core" }
+serde = { workspace = true }
+num-complex = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
+proptest = { workspace = true }

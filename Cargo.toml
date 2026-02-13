@@ -8,6 +8,8 @@ members = [
     "crates/em-electrostatics",
     "crates/em-magnetostatics",
     "crates/em-timevarying",
+    "crates/em-propagation",
+    "crates/em-antennas",
     "crates/em-wasm",
 ]
 
