@@ -1,0 +1,19 @@
+[package]
+name = "em-magnetostatics"
+description = "Chapter 5: Magnetostatics — Biot-Savart law, Ampère's law, magnetic vector potential, forces on current-carrying conductors"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["magnetostatics", "biot-savart", "ampere", "magnetic-field", "electromagnetics"]
+categories = ["science", "simulation"]
+
+[dependencies]
+em-core = { path = "../em-core" }
+serde = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
+proptest = { workspace = true }

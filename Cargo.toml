@@ -6,6 +6,8 @@ members = [
     "crates/em-transmission",
     "crates/em-vectors",
     "crates/em-electrostatics",
+    "crates/em-magnetostatics",
+    "crates/em-timevarying",
     "crates/em-wasm",
 ]
 

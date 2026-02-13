@@ -1,0 +1,20 @@
+[package]
+name = "em-timevarying"
+description = "Chapter 6: Time-Varying Fields — Faraday's law, displacement current, Maxwell's equations"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["faraday", "maxwell", "displacement-current", "emf", "electromagnetics"]
+categories = ["science", "simulation"]
+
+[dependencies]
+em-core = { path = "../em-core" }
+serde = { workspace = true }
+num-complex = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
+proptest = { workspace = true }

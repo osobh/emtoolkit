@@ -86,6 +86,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "em-magnetostatics"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "em-core",
+ "proptest",
+ "serde",
+]
+
+[[package]]
+name = "em-timevarying"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "em-core",
+ "num-complex",
+ "proptest",
+ "serde",
+]
+
+[[package]]
 name = "em-transmission"
 version = "0.1.0"
 dependencies = [
