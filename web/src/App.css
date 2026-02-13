@@ -1,0 +1,18 @@
+.app { display: flex; flex-direction: column; height: 100vh; font-family: system-ui, sans-serif; }
+.app-header { background: #1a1a2e; color: #e0e0ff; padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
+.app-header h1 { margin: 0; font-size: 1.4rem; }
+.subtitle { font-size: 0.85rem; opacity: 0.7; }
+.app-body { display: flex; flex: 1; overflow: hidden; }
+.module-content { flex: 1; padding: 20px; overflow-y: auto; background: #f8f9fa; }
+.loading { display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 1.2rem; }
+.module-panel { max-width: 1200px; }
+.module-panel h2 { margin-top: 0; color: #1a1a2e; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: end; }
+.control-group { display: flex; flex-direction: column; gap: 4px; }
+.control-group label { font-size: 0.8rem; font-weight: 600; color: #555; }
+.control-group input, .control-group select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+.result-box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-top: 12px; }
+.result-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.result-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
+.result-label { font-weight: 600; color: #555; font-size: 0.85rem; }
+.result-value { font-family: 'SF Mono', monospace; color: #1a1a2e; }
