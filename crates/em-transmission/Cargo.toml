@@ -1,0 +1,22 @@
+[package]
+name = "em-transmission"
+description = "Chapter 2: Transmission Lines — Smith chart, TL equations, impedance matching, stub tuning, transient response"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["transmission-line", "smith-chart", "impedance-matching", "electromagnetics"]
+categories = ["science", "simulation"]
+
+[dependencies]
+em-core = { path = "../em-core" }
+num-complex = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
+proptest = { workspace = true }
+serde_json = { workspace = true }
