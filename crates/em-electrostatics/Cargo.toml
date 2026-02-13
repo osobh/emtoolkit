@@ -1,0 +1,19 @@
+[package]
+name = "em-electrostatics"
+description = "Chapter 4: Electrostatics — Coulomb superposition, method of images, dielectric boundaries"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["electrostatics", "coulomb", "electric-field", "method-of-images", "electromagnetics"]
+categories = ["science", "simulation"]
+
+[dependencies]
+em-core = { path = "../em-core" }
+serde = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
+proptest = { workspace = true }

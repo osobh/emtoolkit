@@ -4,6 +4,8 @@ members = [
     "crates/em-core",
     "crates/em-waves",
     "crates/em-transmission",
+    "crates/em-vectors",
+    "crates/em-electrostatics",
     "crates/em-wasm",
 ]
 

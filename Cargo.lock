@@ -76,6 +76,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "em-electrostatics"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "em-core",
+ "proptest",
+ "serde",
+]
+
+[[package]]
 name = "em-transmission"
 version = "0.1.0"
 dependencies = [
@@ -86,6 +96,16 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "em-vectors"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "em-core",
+ "proptest",
+ "serde",
 ]
 
 [[package]]

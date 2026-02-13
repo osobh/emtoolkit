@@ -1,0 +1,19 @@
+[package]
+name = "em-vectors"
+description = "Chapter 3: Vector Analysis — gradient, divergence, curl computation on scalar/vector fields"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["vector-calculus", "gradient", "divergence", "curl", "electromagnetics"]
+categories = ["science", "mathematics"]
+
+[dependencies]
+em-core = { path = "../em-core" }
+serde = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
+proptest = { workspace = true }
