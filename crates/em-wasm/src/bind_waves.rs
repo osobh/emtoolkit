@@ -40,3 +40,48 @@ pub fn phase_comparison(a1: f64, f1: f64, p1: f64, a2: f64, f2: f64, p2: f64, t_
     });
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
+
+#[wasm_bindgen]
+pub fn power_calculations(e0: f64, eta: f64, gamma_mag: f64) -> JsValue {
+    use em_waves::power;
+    let s_avg = power::poynting_average_magnitude(e0, eta);
+    let p_delivered = power::power_delivered(s_avg, gamma_mag);
+    let rl = if gamma_mag > 0.0 { power::return_loss_db(gamma_mag) } else { f64::INFINITY };
+    let ml = power::mismatch_loss_db(gamma_mag);
+    let result = serde_json::json!({
+        "poynting_avg": s_avg,
+        "power_delivered": p_delivered,
+        "power_reflected": s_avg - p_delivered,
+        "return_loss_db": rl,
+        "mismatch_loss_db": ml,
+        "gamma_mag": gamma_mag,
+    });
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn unit_conversions(value: f64, from_unit: &str) -> JsValue {
+    use em_waves::power;
+    let result = match from_unit {
+        "W" => serde_json::json!({
+            "watts": value, "dbm": power::watts_to_dbm(value), "dbw": power::watts_to_dbw(value),
+            "mw": value * 1e3, "uw": value * 1e6,
+        }),
+        "dBm" => {
+            let w = power::dbm_to_watts(value);
+            serde_json::json!({
+                "watts": w, "dbm": value, "dbw": value - 30.0,
+                "mw": w * 1e3, "uw": w * 1e6,
+            })
+        }
+        "dBW" => {
+            let w = power::dbw_to_watts(value);
+            serde_json::json!({
+                "watts": w, "dbm": value + 30.0, "dbw": value,
+                "mw": w * 1e3, "uw": w * 1e6,
+            })
+        }
+        _ => serde_json::json!({"error": "Unknown unit"}),
+    };
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}

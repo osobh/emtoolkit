@@ -94,3 +94,30 @@ pub fn capacitance_calc(geometry: &str, params_json: &str) -> JsValue {
     });
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
+
+#[wasm_bindgen]
+pub fn gauss_sphere_profile(total_charge: f64, radius: f64, epsilon_r: f64, r_max: f64, num_points: usize) -> JsValue {
+    use em_electrostatics::gauss;
+    let (rs, es) = gauss::sphere_e_profile(total_charge, radius, epsilon_r, r_max, num_points);
+    let vs: Vec<f64> = rs.iter().map(|&r| gauss::v_charged_sphere(total_charge, radius, r, epsilon_r)).collect();
+    let result = serde_json::json!({
+        "r": rs,
+        "e_field": es,
+        "potential": vs,
+    });
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn gauss_line_charge(rho_l: f64, epsilon_r: f64, rho_min: f64, rho_max: f64, num_points: usize) -> JsValue {
+    use em_electrostatics::gauss;
+    let mut rhos = Vec::with_capacity(num_points);
+    let mut es = Vec::with_capacity(num_points);
+    for i in 0..num_points {
+        let rho = rho_min + (rho_max - rho_min) * i as f64 / (num_points - 1) as f64;
+        rhos.push(rho);
+        es.push(gauss::e_line_charge(rho_l, rho, epsilon_r));
+    }
+    let result = serde_json::json!({ "rho": rhos, "e_field": es });
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}

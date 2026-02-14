@@ -10,3 +10,4 @@ pub mod biot_savart;
 pub mod current_loops;
 pub mod wire_forces;
 pub mod solenoid;
+pub mod inductance;

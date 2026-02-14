@@ -8,3 +8,4 @@
 pub mod sinusoidal;
 pub mod traveling;
 pub mod phase;
+pub mod power;

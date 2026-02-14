@@ -77,3 +77,68 @@ pub fn coaxial_cable_b(inner_r: f64, outer_inner_r: f64, outer_outer_r: f64, cur
     });
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
+
+#[wasm_bindgen]
+pub fn inductance_calc(geometry: &str, params_json: &str) -> JsValue {
+    use em_magnetostatics::inductance;
+    let p: serde_json::Value = serde_json::from_str(params_json).unwrap_or_default();
+    let mu_r = p["mu_r"].as_f64().unwrap_or(1.0);
+    let current = p["current"].as_f64().unwrap_or(1.0);
+
+    let ind = match geometry {
+        "solenoid" => {
+            let n = p["turns"].as_u64().unwrap_or(100) as usize;
+            let l = p["length"].as_f64().unwrap_or(0.1);
+            let r = p["radius"].as_f64().unwrap_or(0.02);
+            inductance::solenoid(n, l, r, mu_r)
+        }
+        "toroid" => {
+            let n = p["turns"].as_u64().unwrap_or(200) as usize;
+            let a = p["inner_radius"].as_f64().unwrap_or(0.05);
+            let b = p["outer_radius"].as_f64().unwrap_or(0.08);
+            let h = p["height"].as_f64().unwrap_or(0.02);
+            inductance::toroid(n, a, b, h, mu_r)
+        }
+        "coaxial" => {
+            let a = p["inner_radius"].as_f64().unwrap_or(0.001);
+            let b = p["outer_radius"].as_f64().unwrap_or(0.004);
+            let l = p["length"].as_f64().unwrap_or(1.0);
+            inductance::coaxial(a, b, mu_r, l)
+        }
+        "parallel_wires" => {
+            let r = p["wire_radius"].as_f64().unwrap_or(0.001);
+            let d = p["separation"].as_f64().unwrap_or(0.1);
+            let l = p["length"].as_f64().unwrap_or(1.0);
+            inductance::parallel_wires_per_length(r, d, mu_r) * l
+        }
+        _ => 0.0,
+    };
+
+    let w = inductance::energy(ind, current);
+    let tau = if let Some(r) = p["resistance"].as_f64() {
+        inductance::rl_time_constant(ind, r)
+    } else { 0.0 };
+
+    let result = serde_json::json!({
+        "inductance": ind,
+        "energy": w,
+        "current": current,
+        "time_constant": tau,
+        "geometry": geometry,
+    });
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn rl_step(voltage: f64, resistance: f64, inductance_val: f64, t_end: f64, num_points: usize) -> JsValue {
+    use em_magnetostatics::inductance;
+    let (ts, is) = inductance::rl_step_response(voltage, resistance, inductance_val, t_end, num_points);
+    let tau = inductance::rl_time_constant(inductance_val, resistance);
+    let result = serde_json::json!({
+        "t": ts,
+        "current": is,
+        "time_constant": tau,
+        "i_final": voltage / resistance,
+    });
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}

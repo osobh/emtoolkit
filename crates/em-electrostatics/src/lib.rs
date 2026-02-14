@@ -9,3 +9,4 @@
 pub mod point_charges;
 pub mod method_of_images;
 pub mod capacitance;
+pub mod gauss;

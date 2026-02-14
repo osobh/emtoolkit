@@ -36,6 +36,12 @@ import { WaveguideModule } from './modules/WaveguideModule';
 import { DipoleModule } from './modules/DipoleModule';
 import { ArrayFactorModule } from './modules/ArrayFactorModule';
 import { LinkBudgetModule } from './modules/LinkBudgetModule';
+import { GaussModule } from './modules/GaussModule';
+import { PowerModule } from './modules/PowerModule';
+import { InductanceModule } from './modules/InductanceModule';
+import { RLCircuitModule } from './modules/RLCircuitModule';
+import { SnellModule } from './modules/SnellModule';
+import { BoundaryModule } from './modules/BoundaryModule';
 import './App.css';
 
 const MODULES = [
@@ -56,21 +62,27 @@ const MODULES = [
   { id: 'electrostatics', name: '4.1 Electrostatic Fields', chapter: 4 },
   { id: 'images', name: '4.2 Method of Images', chapter: 4 },
   { id: 'capacitance', name: '4.3 Capacitance Calculator', chapter: 4 },
+  { id: 'gauss', name: '4.4 Gauss\'s Law Explorer', chapter: 4 },
   { id: 'magnetostatics', name: '5.1 Magnetostatics', chapter: 5 },
   { id: 'wireforce', name: '5.2 Wire Forces', chapter: 5 },
   { id: 'solenoid', name: '5.3 Solenoid & Inductor', chapter: 5 },
   { id: 'helmholtz', name: '5.4 Helmholtz Coil', chapter: 5 },
   { id: 'coaxbfield', name: '5.5 Coax Cable B-Field', chapter: 5 },
+  { id: 'inductance', name: '5.6 Inductance Calculator', chapter: 5 },
   { id: 'faraday', name: '6.1 Faraday & Time-Varying', chapter: 6 },
   { id: 'displacement', name: '6.2 Displacement Current', chapter: 6 },
   { id: 'relaxation', name: '6.3 Charge Relaxation', chapter: 6 },
   { id: 'generator', name: '6.4 AC Generator', chapter: 6 },
   { id: 'transformer', name: '6.5 Ideal Transformer', chapter: 6 },
+  { id: 'rlcircuit', name: '6.6 RL Circuit Response', chapter: 6 },
   { id: 'medium', name: '7.1 Medium Properties', chapter: 7 },
   { id: 'skindepth', name: '7.2 Skin Depth & Attenuation', chapter: 7 },
   { id: 'polarization', name: '7.3 Polarization', chapter: 7 },
   { id: 'fresnel', name: '7.4 Fresnel Coefficients', chapter: 7 },
-  { id: 'waveguide', name: '7.5 Rectangular Waveguide', chapter: 7 },
+  { id: 'snell', name: '7.5 Snell\'s Law & TIR', chapter: 7 },
+  { id: 'waveguide', name: '7.6 Rectangular Waveguide', chapter: 7 },
+  { id: 'boundary', name: '7.7 Boundary Conditions', chapter: 7 },
+  { id: 'power', name: '7.8 Power & Poynting Vector', chapter: 7 },
   { id: 'dipole', name: '8.1 Dipole Antennas', chapter: 8 },
   { id: 'array', name: '8.2 Antenna Arrays', chapter: 8 },
   { id: 'link', name: '8.3 Friis Link Budget', chapter: 8 },
@@ -105,21 +117,27 @@ function App() {
       case 'electrostatics': return <ElectrostaticsModule />;
       case 'images': return <MethodOfImagesModule />;
       case 'capacitance': return <CapacitanceModule />;
+      case 'gauss': return <GaussModule />;
       case 'magnetostatics': return <MagnetostaticsModule />;
       case 'wireforce': return <WireForceModule />;
       case 'solenoid': return <SolenoidModule />;
       case 'helmholtz': return <HelmholtzModule />;
       case 'coaxbfield': return <CoaxBFieldModule />;
+      case 'inductance': return <InductanceModule />;
       case 'faraday': return <FaradayModule />;
       case 'displacement': return <DisplacementCurrentModule />;
       case 'relaxation': return <ChargeRelaxationModule />;
       case 'generator': return <GeneratorModule />;
       case 'transformer': return <TransformerModule />;
+      case 'rlcircuit': return <RLCircuitModule />;
       case 'medium': return <MediumPropertiesModule />;
       case 'skindepth': return <SkinDepthModule />;
       case 'polarization': return <PolarizationModule />;
       case 'fresnel': return <FresnelModule />;
+      case 'snell': return <SnellModule />;
       case 'waveguide': return <WaveguideModule />;
+      case 'boundary': return <BoundaryModule />;
+      case 'power': return <PowerModule />;
       case 'dipole': return <DipoleModule />;
       case 'array': return <ArrayFactorModule />;
       case 'link': return <LinkBudgetModule />;
