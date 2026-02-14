@@ -19,7 +19,7 @@ export function ModuleSelector({ modules, active, onSelect }: Props) {
     <nav className="module-selector">
       {chapters.map(ch => (
         <div key={ch} className="chapter-group">
-          <div className="chapter-label">{ch === 0 ? 'Tools' : `Chapter ${ch}`}</div>
+          <div className="chapter-label">{ch === 0 ? 'Tools' : ch === 9 ? 'Technology Briefs' : `Chapter ${ch}`}</div>
           {modules.filter(m => m.chapter === ch).map(m => (
             <button
               key={m.id}

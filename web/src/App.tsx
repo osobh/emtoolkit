@@ -57,6 +57,23 @@ import { DivCurlModule } from './modules/DivCurlModule';
 import { MagMaterialsModule } from './modules/MagMaterialsModule';
 import { TLineTransientModule } from './modules/TLineTransientModule';
 import { WaveguideModesModule } from './modules/WaveguideModesModule';
+import { LEDBrief } from './briefs/LEDBrief';
+import { SolarCellBrief } from './briefs/SolarCellBrief';
+import { MicrowaveOvenBrief } from './briefs/MicrowaveOvenBrief';
+import { CancerZapperBrief } from './briefs/CancerZapperBrief';
+import { GPSBrief } from './briefs/GPSBrief';
+import { CTScanBrief } from './briefs/CTScanBrief';
+import { ResistiveSensorBrief } from './briefs/ResistiveSensorBrief';
+import { SupercapBrief } from './briefs/SupercapBrief';
+import { CapSensorBrief } from './briefs/CapSensorBrief';
+import { ElectromagnetBrief } from './briefs/ElectromagnetBrief';
+import { InductiveSensorBrief } from './briefs/InductiveSensorBrief';
+import { EMFSensorBrief } from './briefs/EMFSensorBrief';
+import { RFIDBrief } from './briefs/RFIDBrief';
+import { LCDBrief } from './briefs/LCDBrief';
+import { LaserBrief } from './briefs/LaserBrief';
+import { BarcodeBrief } from './briefs/BarcodeBrief';
+import { HealthRiskBrief } from './briefs/HealthRiskBrief';
 import './App.css';
 
 const MODULES = [
@@ -116,6 +133,23 @@ const MODULES = [
   { id: 'spectrum', name: '0.4 EM Spectrum', chapter: 0 },
   { id: 'lorentz', name: '5.7 Lorentz Force', chapter: 5 },
   { id: 'magmaterials', name: '5.8 Magnetic Materials', chapter: 5 },
+  { id: 'tb-led', name: 'TB1: LED Lighting', chapter: 9 },
+  { id: 'tb-solar', name: 'TB2: Solar Cells', chapter: 9 },
+  { id: 'tb-microwave', name: 'TB3: Microwave Ovens', chapter: 9 },
+  { id: 'tb-cancer', name: 'TB4: EM Cancer Zappers', chapter: 9 },
+  { id: 'tb-gps', name: 'TB5: GPS', chapter: 9 },
+  { id: 'tb-ct', name: 'TB6: X-Ray CT', chapter: 9 },
+  { id: 'tb-resistive', name: 'TB7: Resistive Sensors', chapter: 9 },
+  { id: 'tb-supercap', name: 'TB8: Supercapacitors', chapter: 9 },
+  { id: 'tb-capsensor', name: 'TB9: Capacitive Sensors', chapter: 9 },
+  { id: 'tb-electromagnet', name: 'TB10: Electromagnets', chapter: 9 },
+  { id: 'tb-inductive', name: 'TB11: Inductive Sensors', chapter: 9 },
+  { id: 'tb-emf', name: 'TB12: EMF Sensors', chapter: 9 },
+  { id: 'tb-rfid', name: 'TB13: RFID Systems', chapter: 9 },
+  { id: 'tb-lcd', name: 'TB14: LCD Displays', chapter: 9 },
+  { id: 'tb-laser', name: 'TB15: Lasers', chapter: 9 },
+  { id: 'tb-barcode', name: 'TB16: Bar-Code Readers', chapter: 9 },
+  { id: 'tb-health', name: 'TB17: EM Health Risks', chapter: 9 },
 ];
 
 function App() {
@@ -186,6 +220,23 @@ function App() {
       case 'magmaterials': return <MagMaterialsModule />;
       case 'tlinetransient': return <TLineTransientModule />;
       case 'waveguidemodes': return <WaveguideModesModule />;
+      case 'tb-led': return <LEDBrief />;
+      case 'tb-solar': return <SolarCellBrief />;
+      case 'tb-microwave': return <MicrowaveOvenBrief />;
+      case 'tb-cancer': return <CancerZapperBrief />;
+      case 'tb-gps': return <GPSBrief />;
+      case 'tb-ct': return <CTScanBrief />;
+      case 'tb-resistive': return <ResistiveSensorBrief />;
+      case 'tb-supercap': return <SupercapBrief />;
+      case 'tb-capsensor': return <CapSensorBrief />;
+      case 'tb-electromagnet': return <ElectromagnetBrief />;
+      case 'tb-inductive': return <InductiveSensorBrief />;
+      case 'tb-emf': return <EMFSensorBrief />;
+      case 'tb-rfid': return <RFIDBrief />;
+      case 'tb-lcd': return <LCDBrief />;
+      case 'tb-laser': return <LaserBrief />;
+      case 'tb-barcode': return <BarcodeBrief />;
+      case 'tb-health': return <HealthRiskBrief />;
       default: return <div>Select a module</div>;
     }
   };
