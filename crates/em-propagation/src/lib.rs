@@ -9,3 +9,4 @@
 pub mod plane_wave;
 pub mod polarization;
 pub mod fresnel;
+pub mod waveguide;

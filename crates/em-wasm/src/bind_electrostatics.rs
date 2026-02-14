@@ -2,7 +2,7 @@
 
 use wasm_bindgen::prelude::*;
 use em_core::constants::EPSILON_0;
-use em_electrostatics::{point_charges, method_of_images};
+use em_electrostatics::{point_charges, method_of_images, capacitance};
 
 #[wasm_bindgen]
 pub fn electric_field_2d(charges_json: &str, x_min: f64, x_max: f64, y_min: f64, y_max: f64, nx: usize, ny: usize) -> JsValue {
@@ -48,6 +48,49 @@ pub fn charge_above_plane(charge: f64, height: f64, x_min: f64, x_max: f64, nx: 
         "surface_charge_density": sigma,
         "force_z": force.z,
         "total_induced_charge": config.total_induced_charge(),
+    });
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn capacitance_calc(geometry: &str, params_json: &str) -> JsValue {
+    let p: serde_json::Value = serde_json::from_str(params_json).unwrap_or_default();
+    let eps_r = p["epsilon_r"].as_f64().unwrap_or(1.0);
+    let voltage = p["voltage"].as_f64().unwrap_or(1.0);
+
+    let cap = match geometry {
+        "parallel_plate" => {
+            let area = p["area"].as_f64().unwrap_or(0.01);
+            let sep = p["separation"].as_f64().unwrap_or(0.001);
+            capacitance::parallel_plate(area, sep, eps_r)
+        }
+        "coaxial" => {
+            let a = p["inner_radius"].as_f64().unwrap_or(0.001);
+            let b = p["outer_radius"].as_f64().unwrap_or(0.004);
+            let len = p["length"].as_f64().unwrap_or(1.0);
+            capacitance::coaxial(a, b, eps_r, len)
+        }
+        "spherical" => {
+            let a = p["inner_radius"].as_f64().unwrap_or(0.05);
+            let b = p["outer_radius"].as_f64().unwrap_or(0.1);
+            capacitance::spherical(a, b, eps_r)
+        }
+        "isolated_sphere" => {
+            let r = p["radius"].as_f64().unwrap_or(0.1);
+            capacitance::isolated_sphere(r)
+        }
+        _ => 0.0,
+    };
+
+    let w = capacitance::energy(cap, voltage);
+    let q = capacitance::charge(cap, voltage);
+
+    let result = serde_json::json!({
+        "capacitance": cap,
+        "energy": w,
+        "charge": q,
+        "voltage": voltage,
+        "geometry": geometry,
     });
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
