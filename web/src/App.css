@@ -2,6 +2,7 @@
 .app-header { background: #1a1a2e; color: #e0e0ff; padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
 .app-header h1 { margin: 0; font-size: 1.4rem; }
 .subtitle { font-size: 0.85rem; opacity: 0.7; }
+.module-count { margin-left: auto; font-size: 0.8rem; opacity: 0.6; }
 .app-body { display: flex; flex: 1; overflow: hidden; }
 .module-content { flex: 1; padding: 20px; overflow-y: auto; background: #f8f9fa; }
 .loading { display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 1.2rem; }
