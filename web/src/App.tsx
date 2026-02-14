@@ -40,8 +40,23 @@ import { GaussModule } from './modules/GaussModule';
 import { PowerModule } from './modules/PowerModule';
 import { InductanceModule } from './modules/InductanceModule';
 import { RLCircuitModule } from './modules/RLCircuitModule';
+import { RCCircuitModule } from './modules/RCCircuitModule';
 import { SnellModule } from './modules/SnellModule';
 import { BoundaryModule } from './modules/BoundaryModule';
+import { ResonanceModule } from './modules/ResonanceModule';
+import { LorentzForceModule } from './modules/LorentzForceModule';
+import { WaveEquationModule } from './modules/WaveEquationModule';
+import { EnergyDensityModule } from './modules/EnergyDensityModule';
+import { MaxwellModule } from './modules/MaxwellModule';
+import { RadarModule } from './modules/RadarModule';
+import { SpectrumModule } from './modules/SpectrumModule';
+import { ApertureAntennaModule } from './modules/ApertureAntennaModule';
+import { AntennaGainModule } from './modules/AntennaGainModule';
+import { MicrostripModule } from './modules/MicrostripModule';
+import { DivCurlModule } from './modules/DivCurlModule';
+import { MagMaterialsModule } from './modules/MagMaterialsModule';
+import { TLineTransientModule } from './modules/TLineTransientModule';
+import { WaveguideModesModule } from './modules/WaveguideModesModule';
 import './App.css';
 
 const MODULES = [
@@ -75,6 +90,8 @@ const MODULES = [
   { id: 'generator', name: '6.4 AC Generator', chapter: 6 },
   { id: 'transformer', name: '6.5 Ideal Transformer', chapter: 6 },
   { id: 'rlcircuit', name: '6.6 RL Circuit Response', chapter: 6 },
+  { id: 'rccircuit', name: '6.7 RC Circuit Response', chapter: 6 },
+  { id: 'resonance', name: '6.8 RLC Resonance', chapter: 6 },
   { id: 'medium', name: '7.1 Medium Properties', chapter: 7 },
   { id: 'skindepth', name: '7.2 Skin Depth & Attenuation', chapter: 7 },
   { id: 'polarization', name: '7.3 Polarization', chapter: 7 },
@@ -83,9 +100,22 @@ const MODULES = [
   { id: 'waveguide', name: '7.6 Rectangular Waveguide', chapter: 7 },
   { id: 'boundary', name: '7.7 Boundary Conditions', chapter: 7 },
   { id: 'power', name: '7.8 Power & Poynting Vector', chapter: 7 },
+  { id: 'waveequation', name: '7.9 Wave Equation Visualizer', chapter: 7 },
+  { id: 'energydensity', name: '7.10 Energy Density', chapter: 7 },
+  { id: 'waveguidemodes', name: '7.11 Waveguide Mode Chart', chapter: 7 },
+  { id: 'microstrip', name: '7.12 Microstrip Calculator', chapter: 7 },
+  { id: 'tlinetransient', name: '7.13 T-Line Transients', chapter: 7 },
   { id: 'dipole', name: '8.1 Dipole Antennas', chapter: 8 },
   { id: 'array', name: '8.2 Antenna Arrays', chapter: 8 },
   { id: 'link', name: '8.3 Friis Link Budget', chapter: 8 },
+  { id: 'antennagain', name: '8.4 Antenna Gain & Pattern', chapter: 8 },
+  { id: 'aperture', name: '8.5 Aperture Antenna', chapter: 8 },
+  { id: 'radar', name: '8.6 Radar Range Equation', chapter: 8 },
+  { id: 'divcurl', name: '3.4 Divergence & Curl', chapter: 3 },
+  { id: 'maxwell', name: '0.3 Maxwell\'s Equations', chapter: 0 },
+  { id: 'spectrum', name: '0.4 EM Spectrum', chapter: 0 },
+  { id: 'lorentz', name: '5.7 Lorentz Force', chapter: 5 },
+  { id: 'magmaterials', name: '5.8 Magnetic Materials', chapter: 5 },
 ];
 
 function App() {
@@ -130,6 +160,8 @@ function App() {
       case 'generator': return <GeneratorModule />;
       case 'transformer': return <TransformerModule />;
       case 'rlcircuit': return <RLCircuitModule />;
+      case 'rccircuit': return <RCCircuitModule />;
+      case 'resonance': return <ResonanceModule />;
       case 'medium': return <MediumPropertiesModule />;
       case 'skindepth': return <SkinDepthModule />;
       case 'polarization': return <PolarizationModule />;
@@ -141,6 +173,19 @@ function App() {
       case 'dipole': return <DipoleModule />;
       case 'array': return <ArrayFactorModule />;
       case 'link': return <LinkBudgetModule />;
+      case 'antennagain': return <AntennaGainModule />;
+      case 'aperture': return <ApertureAntennaModule />;
+      case 'radar': return <RadarModule />;
+      case 'lorentz': return <LorentzForceModule />;
+      case 'waveequation': return <WaveEquationModule />;
+      case 'energydensity': return <EnergyDensityModule />;
+      case 'maxwell': return <MaxwellModule />;
+      case 'spectrum': return <SpectrumModule />;
+      case 'microstrip': return <MicrostripModule />;
+      case 'divcurl': return <DivCurlModule />;
+      case 'magmaterials': return <MagMaterialsModule />;
+      case 'tlinetransient': return <TLineTransientModule />;
+      case 'waveguidemodes': return <WaveguideModesModule />;
       default: return <div>Select a module</div>;
     }
   };
