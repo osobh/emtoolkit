@@ -5,8 +5,11 @@
 //! - Module 7.3: Polarization (linear, circular, elliptical, Poincaré sphere)
 //! - Module 7.4: Normal incidence on planar boundary (Fresnel, reflection, transmission)
 //! - Module 7.5: Oblique incidence (Snell's law, Brewster angle, TIR, critical angle)
+//! - Module 7.6: Rectangular and parallel plate waveguides
+//! - Module 7.7: Dielectric slab waveguides
 
 pub mod plane_wave;
 pub mod polarization;
 pub mod fresnel;
 pub mod waveguide;
+pub mod dielectric_waveguide;

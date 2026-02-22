@@ -57,6 +57,23 @@ import { DivCurlModule } from './modules/DivCurlModule';
 import { MagMaterialsModule } from './modules/MagMaterialsModule';
 import { TLineTransientModule } from './modules/TLineTransientModule';
 import { WaveguideModesModule } from './modules/WaveguideModesModule';
+// New gap-fill modules
+import { StriplineModule } from './modules/StriplineModule';
+import { TwoWireModule } from './modules/TwoWireModule';
+import { SlottedLineModule } from './modules/SlottedLineModule';
+import { LossyLineModule } from './modules/LossyLineModule';
+import { DoubleStubModule } from './modules/DoubleStubModule';
+import { SeriesStubModule } from './modules/SeriesStubModule';
+import { LNetworkModule } from './modules/LNetworkModule';
+import { MultisectionModule } from './modules/MultisectionModule';
+import { TaperModule } from './modules/TaperModule';
+import { GeneralTransformerModule } from './modules/GeneralTransformerModule';
+import { TwoLineTransformerModule } from './modules/TwoLineTransformerModule';
+import { ParallelPlateWaveguideModule } from './modules/ParallelPlateWaveguideModule';
+import { DielectricWaveguideModule } from './modules/DielectricWaveguideModule';
+import { TwoAntennaModule } from './modules/TwoAntennaModule';
+import { FresnelLossyModule } from './modules/FresnelLossyModule';
+import { StandingWaveVSWRModule } from './modules/StandingWaveVSWRModule';
 import { LEDBrief } from './briefs/LEDBrief';
 import { SolarCellBrief } from './briefs/SolarCellBrief';
 import { MicrowaveOvenBrief } from './briefs/MicrowaveOvenBrief';
@@ -88,6 +105,17 @@ const MODULES = [
   { id: 'impedance', name: '2.4 Γ & Input Impedance', chapter: 2 },
   { id: 'coaxial', name: '2.5 Coaxial Line Params', chapter: 2 },
   { id: 'quarterwave', name: '2.6 λ/4 Transformer', chapter: 2 },
+  { id: 'stripline', name: '2.7 Stripline Calculator', chapter: 2 },
+  { id: 'twowire', name: '2.8 Two-Wire Line', chapter: 2 },
+  { id: 'slottedline', name: '2.9 Slotted Line Measurement', chapter: 2 },
+  { id: 'lossyline', name: '2.10 General Lossy Line', chapter: 2 },
+  { id: 'doublestub', name: '2.11 Double Stub Matching', chapter: 2 },
+  { id: 'seriesstub', name: '2.12 Series Stub Matching', chapter: 2 },
+  { id: 'lnetwork', name: '2.13 L-Network Matching', chapter: 2 },
+  { id: 'multisection', name: '2.14 Multisection Transformer', chapter: 2 },
+  { id: 'taper', name: '2.15 Taper Line Matching', chapter: 2 },
+  { id: 'gentransformer', name: '2.16 General Transformer', chapter: 2 },
+  { id: 'twolinetransformer', name: '2.17 Two-Line Transformer', chapter: 2 },
   { id: 'vectorops', name: '3.1 Vector Operations', chapter: 3 },
   { id: 'vectors', name: '3.2 Scalar & Vector Fields', chapter: 3 },
   { id: 'gradient', name: '3.3 Gradient Calculator', chapter: 3 },
@@ -115,6 +143,9 @@ const MODULES = [
   { id: 'fresnel', name: '7.4 Fresnel Coefficients', chapter: 7 },
   { id: 'snell', name: '7.5 Snell\'s Law & TIR', chapter: 7 },
   { id: 'waveguide', name: '7.6 Rectangular Waveguide', chapter: 7 },
+  { id: 'parallelwg', name: '7.6b Parallel Plate Waveguide', chapter: 7 },
+  { id: 'dielectricwg', name: '7.6c Dielectric Waveguide', chapter: 7 },
+  { id: 'fresnellossy', name: '7.4b Fresnel (Lossy)', chapter: 7 },
   { id: 'boundary', name: '7.7 Boundary Conditions', chapter: 7 },
   { id: 'power', name: '7.8 Power & Poynting Vector', chapter: 7 },
   { id: 'waveequation', name: '7.9 Wave Equation Visualizer', chapter: 7 },
@@ -124,6 +155,7 @@ const MODULES = [
   { id: 'tlinetransient', name: '7.13 T-Line Transients', chapter: 7 },
   { id: 'dipole', name: '8.1 Dipole Antennas', chapter: 8 },
   { id: 'array', name: '8.2 Antenna Arrays', chapter: 8 },
+  { id: 'twoantenna', name: '8.2b Two-Antenna Array', chapter: 8 },
   { id: 'link', name: '8.3 Friis Link Budget', chapter: 8 },
   { id: 'antennagain', name: '8.4 Antenna Gain & Pattern', chapter: 8 },
   { id: 'aperture', name: '8.5 Aperture Antenna', chapter: 8 },
@@ -131,6 +163,7 @@ const MODULES = [
   { id: 'divcurl', name: '3.4 Divergence & Curl', chapter: 3 },
   { id: 'maxwell', name: '0.3 Maxwell\'s Equations', chapter: 0 },
   { id: 'spectrum', name: '0.4 EM Spectrum', chapter: 0 },
+  { id: 'standingvswr', name: '2.2b Standing Waves (VSWR)', chapter: 2 },
   { id: 'lorentz', name: '5.7 Lorentz Force', chapter: 5 },
   { id: 'magmaterials', name: '5.8 Magnetic Materials', chapter: 5 },
   { id: 'tb-led', name: 'TB1: LED Lighting', chapter: 9 },
@@ -175,6 +208,18 @@ function App() {
       case 'impedance': return <ImpedanceModule />;
       case 'coaxial': return <CoaxialLineModule />;
       case 'quarterwave': return <QuarterWaveModule />;
+      case 'stripline': return <StriplineModule />;
+      case 'twowire': return <TwoWireModule />;
+      case 'slottedline': return <SlottedLineModule />;
+      case 'lossyline': return <LossyLineModule />;
+      case 'doublestub': return <DoubleStubModule />;
+      case 'seriesstub': return <SeriesStubModule />;
+      case 'lnetwork': return <LNetworkModule />;
+      case 'multisection': return <MultisectionModule />;
+      case 'taper': return <TaperModule />;
+      case 'gentransformer': return <GeneralTransformerModule />;
+      case 'twolinetransformer': return <TwoLineTransformerModule />;
+      case 'standingvswr': return <StandingWaveVSWRModule />;
       case 'vectorops': return <VectorOpsModule />;
       case 'vectors': return <VectorFieldModule />;
       case 'gradient': return <GradientModule />;
@@ -202,10 +247,14 @@ function App() {
       case 'fresnel': return <FresnelModule />;
       case 'snell': return <SnellModule />;
       case 'waveguide': return <WaveguideModule />;
+      case 'parallelwg': return <ParallelPlateWaveguideModule />;
+      case 'dielectricwg': return <DielectricWaveguideModule />;
+      case 'fresnellossy': return <FresnelLossyModule />;
       case 'boundary': return <BoundaryModule />;
       case 'power': return <PowerModule />;
       case 'dipole': return <DipoleModule />;
       case 'array': return <ArrayFactorModule />;
+      case 'twoantenna': return <TwoAntennaModule />;
       case 'link': return <LinkBudgetModule />;
       case 'antennagain': return <AntennaGainModule />;
       case 'aperture': return <ApertureAntennaModule />;

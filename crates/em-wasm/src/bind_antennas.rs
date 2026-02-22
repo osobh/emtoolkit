@@ -78,3 +78,19 @@ pub fn link_vs_distance(p_tx_w: f64, g_tx_db: f64, g_rx_db: f64, frequency: f64,
     let result = serde_json::json!({ "distances": ds, "power_dbm": ps });
     serde_wasm_bindgen::to_value(&result).unwrap()
 }
+
+#[wasm_bindgen]
+pub fn two_element_array(element_length_wavelengths: f64, spacing_wavelengths: f64, phase_shift_deg: f64, num_points: usize) -> JsValue {
+    let result = arrays::two_element_array(element_length_wavelengths, spacing_wavelengths, phase_shift_deg, num_points);
+    let angles_deg: Vec<f64> = result.angles.iter().map(|a| a.to_degrees()).collect();
+    let output = serde_json::json!({
+        "angles_deg": angles_deg,
+        "pattern_db": result.pattern_db,
+        "element_pattern": result.element_pattern,
+        "array_factor": result.array_factor,
+        "beamwidth_deg": result.beamwidth_deg,
+        "directivity": result.directivity,
+        "main_beam_deg": result.main_beam_deg,
+    });
+    serde_wasm_bindgen::to_value(&output).unwrap()
+}

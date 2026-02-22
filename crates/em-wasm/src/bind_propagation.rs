@@ -1,7 +1,7 @@
 //! WASM bindings for em-propagation.
 
 use wasm_bindgen::prelude::*;
-use em_propagation::{plane_wave, polarization, fresnel};
+use em_propagation::{plane_wave, polarization, fresnel, waveguide, dielectric_waveguide};
 
 #[wasm_bindgen]
 pub fn medium_properties(epsilon_r: f64, mu_r: f64, conductivity: f64, frequency: f64) -> JsValue {
@@ -164,4 +164,116 @@ pub fn waveguide_rect(a_mm: f64, b_mm: f64, epsilon_r: f64, frequency: f64) -> J
         "modes": mode_list,
     });
     serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn parallel_plate_waveguide(d_mm: f64, epsilon_r: f64, frequency: f64, max_modes: usize) -> JsValue {
+    let pp = waveguide::ParallelPlateWaveguide::new(d_mm / 1000.0, epsilon_r, 1.0);
+
+    let cutoffs: Vec<serde_json::Value> = pp.first_n_cutoffs(max_modes)
+        .iter()
+        .map(|(n, fc)| {
+            serde_json::json!({
+                "mode_n": n,
+                "f_cutoff": fc,
+            })
+        })
+        .collect();
+
+    let propagating: Vec<serde_json::Value> = pp.propagating_modes(frequency, max_modes)
+        .iter()
+        .map(|m| {
+            serde_json::json!({
+                "mode": format!("{}_{}", m.mode_type, m.mode_number),
+                "mode_number": m.mode_number,
+                "mode_type": m.mode_type,
+                "f_cutoff": m.f_cutoff,
+                "beta": m.beta,
+                "lambda_g": m.lambda_g,
+                "v_phase": m.v_phase,
+                "v_group": m.v_group,
+            })
+        })
+        .collect();
+
+    // Analyze first mode at the given frequency
+    let mode1 = pp.mode_at_frequency(1, frequency, "TE");
+
+    let result = serde_json::json!({
+        "d_m": d_mm / 1000.0,
+        "v_medium": pp.v_medium(),
+        "first_cutoff": pp.cutoff_frequency(1),
+        "mode1_propagates": mode1.propagates,
+        "mode1_beta": mode1.beta,
+        "mode1_lambda_g": mode1.lambda_g,
+        "mode1_v_phase": mode1.v_phase,
+        "mode1_v_group": mode1.v_group,
+        "cutoffs": cutoffs,
+        "propagating_modes": propagating,
+    });
+    serde_wasm_bindgen::to_value(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn dielectric_slab_waveguide(d_um: f64, epsilon_core: f64, epsilon_clad: f64, wavelength_um: f64, max_modes: usize) -> JsValue {
+    let d_m = d_um * 1e-6;
+    let lambda_m = wavelength_um * 1e-6;
+    let frequency = 3e8 / lambda_m;
+
+    let result = dielectric_waveguide::dielectric_slab_modes(d_m, epsilon_core, epsilon_clad, frequency, max_modes);
+
+    let modes: Vec<serde_json::Value> = result.modes.iter().map(|m| {
+        serde_json::json!({
+            "mode_number": m.mode_number,
+            "mode_type": m.mode_type,
+            "beta": m.beta,
+            "effective_index": m.effective_index,
+            "gamma": m.gamma,
+            "kappa": m.kappa,
+            "confinement": m.confinement,
+        })
+    }).collect();
+
+    let output = serde_json::json!({
+        "v_number": result.v_number,
+        "num_modes_estimate": result.num_modes_estimate,
+        "n_core": result.n_core,
+        "n_clad": result.n_clad,
+        "numerical_aperture": result.numerical_aperture,
+        "modes": modes,
+    });
+    serde_wasm_bindgen::to_value(&output).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn fresnel_lossy_coefficients(epsilon1: f64, epsilon2: f64, sigma2: f64, frequency: f64, angle_deg: f64) -> JsValue {
+    let result = fresnel::fresnel_lossy(epsilon1, epsilon2, sigma2, frequency, angle_deg);
+    let output = serde_json::json!({
+        "gamma_te_re": result.gamma_te_re,
+        "gamma_te_im": result.gamma_te_im,
+        "gamma_tm_re": result.gamma_tm_re,
+        "gamma_tm_im": result.gamma_tm_im,
+        "reflectance_te": result.reflectance_te,
+        "reflectance_tm": result.reflectance_tm,
+        "phase_shift_te_deg": result.phase_shift_te_deg,
+        "phase_shift_tm_deg": result.phase_shift_tm_deg,
+        "transmittance_te": result.transmittance_te,
+        "transmittance_tm": result.transmittance_tm,
+        "theta_t_re_deg": result.theta_t_re_deg,
+        "is_pseudo_tir": result.is_pseudo_tir,
+    });
+    serde_wasm_bindgen::to_value(&output).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn fresnel_lossy_vs_angle(epsilon1: f64, epsilon2: f64, sigma2: f64, frequency: f64, num_points: usize) -> JsValue {
+    let result = fresnel::fresnel_lossy_vs_angle(epsilon1, epsilon2, sigma2, frequency, num_points);
+    let output = serde_json::json!({
+        "angles_deg": result.angles_deg,
+        "reflectance_te": result.reflectance_te,
+        "reflectance_tm": result.reflectance_tm,
+        "phase_te": result.phase_te,
+        "phase_tm": result.phase_tm,
+    });
+    serde_wasm_bindgen::to_value(&output).unwrap()
 }

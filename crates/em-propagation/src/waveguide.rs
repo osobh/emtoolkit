@@ -120,9 +120,165 @@ pub fn circular_tm01_cutoff(radius: f64, epsilon_r: f64, mu_r: f64) -> f64 {
     2.4049 * v / (2.0 * PI * radius)
 }
 
+/// Parallel plate waveguide (two infinite conducting plates).
+///
+/// Supports TE_n and TM_n modes for n ≥ 1.
+#[derive(Debug, Clone, Copy)]
+pub struct ParallelPlateWaveguide {
+    /// Plate separation, meters
+    pub d: f64,
+    /// Relative permittivity of fill
+    pub epsilon_r: f64,
+    /// Relative permeability of fill
+    pub mu_r: f64,
+}
+
+/// Mode information for parallel plate waveguide.
+#[derive(Debug, Clone)]
+pub struct ParallelPlateMode {
+    pub mode_number: usize,
+    pub mode_type: &'static str,
+    pub f_cutoff: f64,
+    pub propagates: bool,
+    pub beta: f64,
+    pub lambda_g: f64,
+    pub v_phase: f64,
+    pub v_group: f64,
+}
+
+impl ParallelPlateWaveguide {
+    pub fn new(d: f64, epsilon_r: f64, mu_r: f64) -> Self {
+        Self { d, epsilon_r, mu_r }
+    }
+
+    /// Speed of light in the filling medium.
+    pub fn v_medium(&self) -> f64 {
+        C / (self.epsilon_r * self.mu_r).sqrt()
+    }
+
+    /// Cutoff frequency for TE_n or TM_n mode.
+    ///
+    /// f_c = n / (2d√(με))
+    pub fn cutoff_frequency(&self, mode_n: usize) -> f64 {
+        if mode_n == 0 {
+            return 0.0; // TEM mode has no cutoff
+        }
+        mode_n as f64 / (2.0 * self.d * (self.epsilon_r * self.mu_r).sqrt()) * C
+    }
+
+    /// Guide wavelength for mode n at frequency f.
+    ///
+    /// λ_g = λ / √(1 - (f_c/f)²)
+    pub fn guide_wavelength(&self, frequency: f64, mode_n: usize) -> f64 {
+        let fc = self.cutoff_frequency(mode_n);
+        if frequency <= fc {
+            return f64::INFINITY;
+        }
+        let lambda = self.v_medium() / frequency;
+        lambda / (1.0 - (fc / frequency).powi(2)).sqrt()
+    }
+
+    /// Phase velocity for mode n at frequency f.
+    ///
+    /// v_p = v / √(1 - (f_c/f)²)
+    pub fn phase_velocity(&self, frequency: f64, mode_n: usize) -> f64 {
+        let fc = self.cutoff_frequency(mode_n);
+        if frequency <= fc {
+            return f64::INFINITY;
+        }
+        self.v_medium() / (1.0 - (fc / frequency).powi(2)).sqrt()
+    }
+
+    /// Group velocity for mode n at frequency f.
+    ///
+    /// v_g = v · √(1 - (f_c/f)²)
+    pub fn group_velocity(&self, frequency: f64, mode_n: usize) -> f64 {
+        let fc = self.cutoff_frequency(mode_n);
+        if frequency <= fc {
+            return 0.0;
+        }
+        self.v_medium() * (1.0 - (fc / frequency).powi(2)).sqrt()
+    }
+
+    /// Propagation constant β for mode n at frequency f.
+    pub fn beta(&self, frequency: f64, mode_n: usize) -> f64 {
+        let fc = self.cutoff_frequency(mode_n);
+        if frequency <= fc {
+            return 0.0;
+        }
+        let k = 2.0 * PI * frequency / self.v_medium();
+        k * (1.0 - (fc / frequency).powi(2)).sqrt()
+    }
+
+    /// Analyze a specific mode at given frequency.
+    pub fn mode_at_frequency(&self, mode_n: usize, frequency: f64, mode_type: &'static str) -> ParallelPlateMode {
+        let fc = self.cutoff_frequency(mode_n);
+        let propagates = frequency > fc;
+        let (beta, lambda_g, v_phase, v_group) = if propagates {
+            (
+                self.beta(frequency, mode_n),
+                self.guide_wavelength(frequency, mode_n),
+                self.phase_velocity(frequency, mode_n),
+                self.group_velocity(frequency, mode_n),
+            )
+        } else {
+            (0.0, f64::INFINITY, f64::INFINITY, 0.0)
+        };
+
+        ParallelPlateMode {
+            mode_number: mode_n,
+            mode_type,
+            f_cutoff: fc,
+            propagates,
+            beta,
+            lambda_g,
+            v_phase,
+            v_group,
+        }
+    }
+
+    /// List cutoff frequencies for first N modes.
+    pub fn first_n_cutoffs(&self, n: usize) -> Vec<(usize, f64)> {
+        (1..=n).map(|i| (i, self.cutoff_frequency(i))).collect()
+    }
+
+    /// Get all modes (TE and TM) that propagate at given frequency.
+    pub fn propagating_modes(&self, frequency: f64, max_order: usize) -> Vec<ParallelPlateMode> {
+        let mut modes = Vec::new();
+        for n in 1..=max_order {
+            let fc = self.cutoff_frequency(n);
+            if fc < frequency {
+                modes.push(self.mode_at_frequency(n, frequency, "TE"));
+                modes.push(self.mode_at_frequency(n, frequency, "TM"));
+            }
+        }
+        modes.sort_by(|a, b| a.f_cutoff.partial_cmp(&b.f_cutoff).unwrap());
+        modes
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parallel_plate_cutoff() {
+        // d = 1cm, air-filled
+        let pp = ParallelPlateWaveguide::new(0.01, 1.0, 1.0);
+        let fc1 = pp.cutoff_frequency(1);
+        // f_c1 = c/(2d) = 3e8 / 0.02 = 15 GHz
+        assert!((fc1 / 1e9 - 15.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_parallel_plate_phase_group_product() {
+        let pp = ParallelPlateWaveguide::new(0.01, 1.0, 1.0);
+        let f = 20e9;
+        let vp = pp.phase_velocity(f, 1);
+        let vg = pp.group_velocity(f, 1);
+        let v = pp.v_medium();
+        assert!((vp * vg - v * v).abs() / (v * v) < 0.001);
+    }
 
     #[test]
     fn test_wr90_dominant() {

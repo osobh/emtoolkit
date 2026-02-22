@@ -260,6 +260,45 @@ pub fn trace_toward_generator(
         .collect()
 }
 
+/// Trace along a lossy transmission line, producing a spiral that moves inward.
+///
+/// Unlike lossless lines where |Γ| is constant, lossy lines cause the reflection
+/// coefficient to decrease (spiral inward) as we move toward the generator.
+///
+/// # Arguments
+/// * `load_point` - Smith chart point at the load
+/// * `alpha` - Attenuation constant (Np/m)
+/// * `beta` - Phase constant (rad/m)
+/// * `length` - Total line length (m)
+/// * `num_points` - Number of points to trace
+///
+/// # Returns
+/// Vector of (Γ_re, Γ_im) coordinates spiraling inward from load to generator.
+///
+/// # Theory
+/// At distance z from load: Γ(z) = Γ_L · e^{-2γz} = Γ_L · e^{-2αz} · e^{-j2βz}
+/// The magnitude decreases by e^{-2αz} while the phase rotates by -2βz.
+pub fn trace_lossy(
+    load_point: &SmithPoint,
+    alpha: f64,
+    beta: f64,
+    length: f64,
+    num_points: usize,
+) -> Vec<(f64, f64)> {
+    let gamma_l = load_point.gamma;
+    
+    (0..num_points)
+        .map(|i| {
+            let z = length * i as f64 / (num_points - 1).max(1) as f64;
+            // Γ(z) = Γ_L · e^{-2(α+jβ)z}
+            let attenuation = (-2.0 * alpha * z).exp();
+            let rotation = -2.0 * beta * z;
+            let gamma_z = gamma_l * attenuation * Complex64::from_polar(1.0, rotation);
+            (gamma_z.re, gamma_z.im)
+        })
+        .collect()
+}
+
 /// Q-circle: constant Q = |x|/r on the Smith chart.
 ///
 /// For a given Q value, the circle passes through the origin and center of the chart
@@ -559,6 +598,77 @@ mod tests {
         let expected_mag = sp.gamma_magnitude();
         for pt in &trace {
             assert_relative_eq!(pt.gamma_magnitude(), expected_mag, epsilon = 1e-12);
+        }
+    }
+
+    // ================================================================
+    // Lossy trace tests
+    // ================================================================
+
+    #[test]
+    fn lossy_trace_starts_at_load() {
+        let sp = SmithPoint::from_impedance(Complex64::new(2.0, 1.0));
+        let trace = trace_lossy(&sp, 0.1, 10.0, 1.0, 100);
+        assert_relative_eq!(trace[0].0, sp.gamma.re, epsilon = 1e-12);
+        assert_relative_eq!(trace[0].1, sp.gamma.im, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn lossy_trace_magnitude_decreases() {
+        let sp = SmithPoint::from_impedance(Complex64::new(2.0, 1.0));
+        let trace = trace_lossy(&sp, 0.1, 10.0, 1.0, 100);
+        let start_mag = (trace[0].0.powi(2) + trace[0].1.powi(2)).sqrt();
+        let end_mag = (trace.last().unwrap().0.powi(2) + trace.last().unwrap().1.powi(2)).sqrt();
+        assert!(end_mag < start_mag, "magnitude should decrease along lossy line");
+    }
+
+    #[test]
+    fn lossy_trace_attenuation_rate() {
+        let sp = SmithPoint::from_impedance(Complex64::new(2.0, 0.0));
+        let alpha = 0.5;
+        let length = 1.0;
+        let trace = trace_lossy(&sp, alpha, 0.0, length, 100);
+        
+        let start_mag = (trace[0].0.powi(2) + trace[0].1.powi(2)).sqrt();
+        let end_mag = (trace.last().unwrap().0.powi(2) + trace.last().unwrap().1.powi(2)).sqrt();
+        
+        // Expected attenuation: e^{-2αL}
+        let expected_ratio = (-2.0 * alpha * length).exp();
+        assert_relative_eq!(end_mag / start_mag, expected_ratio, max_relative = 0.01);
+    }
+
+    #[test]
+    fn lossy_trace_with_zero_alpha_equals_lossless() {
+        let sp = SmithPoint::from_impedance(Complex64::new(0.5, 0.8));
+        let beta = 10.0;
+        let length = 0.5;
+        
+        let lossy = trace_lossy(&sp, 0.0, beta, length, 50);
+        let lossless = trace_toward_generator(&sp, 50, beta * length);
+        
+        // Should produce same points
+        for (i, pt) in lossy.iter().enumerate() {
+            assert_relative_eq!(pt.0, lossless[i].gamma.re, epsilon = 1e-10);
+            assert_relative_eq!(pt.1, lossless[i].gamma.im, epsilon = 1e-10);
+        }
+    }
+
+    #[test]
+    fn lossy_trace_spirals_toward_center() {
+        let sp = SmithPoint::from_impedance(Complex64::new(0.5, 1.0));
+        let trace = trace_lossy(&sp, 0.2, 5.0, 2.0, 200);
+        
+        // Check that points spiral inward
+        let mut prev_mag = f64::INFINITY;
+        // Sample every 10th point to avoid noise from rotation
+        for chunk in trace.chunks(10) {
+            let avg_mag: f64 = chunk.iter()
+                .map(|(re, im)| (re.powi(2) + im.powi(2)).sqrt())
+                .sum::<f64>() / chunk.len() as f64;
+            if prev_mag < f64::INFINITY {
+                assert!(avg_mag <= prev_mag + 0.01, "should generally spiral inward");
+            }
+            prev_mag = avg_mag;
         }
     }
 }

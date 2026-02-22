@@ -173,6 +173,238 @@ pub struct FresnelSample {
     pub gamma_par: Vec<f64>,
 }
 
+/// Result from lossy Fresnel calculation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FresnelLossyResult {
+    /// TE reflection coefficient (complex) - real part
+    pub gamma_te_re: f64,
+    /// TE reflection coefficient (complex) - imaginary part
+    pub gamma_te_im: f64,
+    /// TM reflection coefficient (complex) - real part
+    pub gamma_tm_re: f64,
+    /// TM reflection coefficient (complex) - imaginary part
+    pub gamma_tm_im: f64,
+    /// Power reflectance for TE |Γ_TE|²
+    pub reflectance_te: f64,
+    /// Power reflectance for TM |Γ_TM|²
+    pub reflectance_tm: f64,
+    /// Phase shift for TE reflection (degrees)
+    pub phase_shift_te_deg: f64,
+    /// Phase shift for TM reflection (degrees)
+    pub phase_shift_tm_deg: f64,
+    /// Transmitted power fraction for TE
+    pub transmittance_te: f64,
+    /// Transmitted power fraction for TM
+    pub transmittance_tm: f64,
+    /// Complex transmission angle - real part (degrees)
+    pub theta_t_re_deg: f64,
+    /// Complex transmission angle - imaginary part
+    pub theta_t_im: f64,
+    /// Is it total internal reflection?
+    pub is_pseudo_tir: bool,
+}
+
+/// Oblique incidence on a lossy medium.
+///
+/// Medium 2 has complex permittivity: ε₂ = ε₂' - jε₂'' = ε₂'(1 - jσ/(ωε₂'))
+pub fn fresnel_lossy(
+    epsilon1: f64,
+    epsilon2: f64,
+    sigma2: f64,
+    frequency: f64,
+    angle_deg: f64,
+) -> FresnelLossyResult {
+    use std::f64::consts::PI;
+
+    let omega = 2.0 * PI * frequency;
+    let eps0 = 8.854e-12;
+
+    // Complex permittivity of medium 2
+    // ε₂_complex = ε₂ - jσ/ω = ε₀ε₂ᵣ - jσ/ω
+    // For relative: ε_r2_complex = ε₂ᵣ - jσ/(ωε₀)
+    let eps2_rel_re = epsilon2;
+    let eps2_rel_im = -sigma2 / (omega * eps0); // negative for loss
+
+    let theta_i = angle_deg.to_radians();
+    let sin_i = theta_i.sin();
+    let cos_i = theta_i.cos();
+
+    // Refractive indices (complex for medium 2)
+    let n1 = epsilon1.sqrt();
+    let n2_sq_re = eps2_rel_re;
+    let n2_sq_im = eps2_rel_im;
+
+    // Complex sin(θ_t) from Snell's law: sin(θ_t) = (n1/n2) sin(θ_i)
+    // n2² = n2_sq_re + j*n2_sq_im
+    // sin²(θ_t) = (n1² / n2²) sin²(θ_i)
+
+    // Complex division: n1²/n2²
+    let n1_sq = n1 * n1;
+    let denom = n2_sq_re * n2_sq_re + n2_sq_im * n2_sq_im;
+    let ratio_re = n1_sq * n2_sq_re / denom;
+    let ratio_im = -n1_sq * n2_sq_im / denom;
+
+    // sin²(θ_t) = ratio * sin²(θ_i)
+    let sin_i_sq = sin_i * sin_i;
+    let sin_t_sq_re = ratio_re * sin_i_sq;
+    let sin_t_sq_im = ratio_im * sin_i_sq;
+
+    // cos²(θ_t) = 1 - sin²(θ_t)
+    let cos_t_sq_re = 1.0 - sin_t_sq_re;
+    let cos_t_sq_im = -sin_t_sq_im;
+
+    // cos(θ_t) = sqrt(cos²(θ_t)) - complex square root
+    let (cos_t_re, cos_t_im) = complex_sqrt(cos_t_sq_re, cos_t_sq_im);
+
+    // n2 = sqrt(n2²) - complex square root
+    let (n2_re, n2_im) = complex_sqrt(n2_sq_re, n2_sq_im);
+
+    // Fresnel coefficients using complex arithmetic
+    // TE (s-pol): Γ_s = (n1·cosθ_i - n2·cosθ_t) / (n1·cosθ_i + n2·cosθ_t)
+    // TM (p-pol): Γ_p = (n2·cosθ_i - n1·cosθ_t) / (n2·cosθ_i + n1·cosθ_t)
+
+    // n2 · cos(θ_t) = (n2_re + j·n2_im)(cos_t_re + j·cos_t_im)
+    let n2_cos_t_re = n2_re * cos_t_re - n2_im * cos_t_im;
+    let n2_cos_t_im = n2_re * cos_t_im + n2_im * cos_t_re;
+
+    // n1 · cos(θ_i) is real
+    let n1_cos_i = n1 * cos_i;
+
+    // TE: Γ_s = (n1_cos_i - n2_cos_t) / (n1_cos_i + n2_cos_t)
+    let num_te_re = n1_cos_i - n2_cos_t_re;
+    let num_te_im = -n2_cos_t_im;
+    let den_te_re = n1_cos_i + n2_cos_t_re;
+    let den_te_im = n2_cos_t_im;
+
+    let (gamma_te_re, gamma_te_im) = complex_div(num_te_re, num_te_im, den_te_re, den_te_im);
+
+    // TM: Γ_p = (n2·cosθ_i - n1·cosθ_t) / (n2·cosθ_i + n1·cosθ_t)
+    // n2 · cos(θ_i) = (n2_re + j·n2_im) · cos_i
+    let n2_cos_i_re = n2_re * cos_i;
+    let n2_cos_i_im = n2_im * cos_i;
+
+    // n1 · cos(θ_t)
+    let n1_cos_t_re = n1 * cos_t_re;
+    let n1_cos_t_im = n1 * cos_t_im;
+
+    let num_tm_re = n2_cos_i_re - n1_cos_t_re;
+    let num_tm_im = n2_cos_i_im - n1_cos_t_im;
+    let den_tm_re = n2_cos_i_re + n1_cos_t_re;
+    let den_tm_im = n2_cos_i_im + n1_cos_t_im;
+
+    let (gamma_tm_re, gamma_tm_im) = complex_div(num_tm_re, num_tm_im, den_tm_re, den_tm_im);
+
+    // Magnitudes and phases
+    let reflectance_te = gamma_te_re * gamma_te_re + gamma_te_im * gamma_te_im;
+    let reflectance_tm = gamma_tm_re * gamma_tm_re + gamma_tm_im * gamma_tm_im;
+
+    let phase_shift_te_deg = gamma_te_im.atan2(gamma_te_re).to_degrees();
+    let phase_shift_tm_deg = gamma_tm_im.atan2(gamma_tm_re).to_degrees();
+
+    // For lossy medium, transmitted power is not simply 1 - |Γ|²
+    // but we use it as an approximation (actual is more complex due to impedance mismatch)
+    let transmittance_te = (1.0 - reflectance_te).max(0.0);
+    let transmittance_tm = (1.0 - reflectance_tm).max(0.0);
+
+    // Transmission angle (complex)
+    let theta_t_re_deg = cos_t_re.acos().to_degrees();
+    let theta_t_im = cos_t_im;
+
+    // Pseudo-TIR occurs when reflectance approaches 1
+    let is_pseudo_tir = reflectance_te > 0.99 || reflectance_tm > 0.99;
+
+    FresnelLossyResult {
+        gamma_te_re,
+        gamma_te_im,
+        gamma_tm_re,
+        gamma_tm_im,
+        reflectance_te,
+        reflectance_tm,
+        phase_shift_te_deg,
+        phase_shift_tm_deg,
+        transmittance_te,
+        transmittance_tm,
+        theta_t_re_deg,
+        theta_t_im,
+        is_pseudo_tir,
+    }
+}
+
+/// Sample lossy Fresnel coefficients vs angle.
+pub fn fresnel_lossy_vs_angle(
+    epsilon1: f64,
+    epsilon2: f64,
+    sigma2: f64,
+    frequency: f64,
+    num_points: usize,
+) -> FresnelLossySample {
+    let mut angles_deg = Vec::with_capacity(num_points);
+    let mut reflectance_te = Vec::with_capacity(num_points);
+    let mut reflectance_tm = Vec::with_capacity(num_points);
+    let mut phase_te = Vec::with_capacity(num_points);
+    let mut phase_tm = Vec::with_capacity(num_points);
+
+    for i in 0..num_points {
+        let angle = 89.9 * i as f64 / (num_points - 1) as f64;
+        angles_deg.push(angle);
+
+        let result = fresnel_lossy(epsilon1, epsilon2, sigma2, frequency, angle);
+        reflectance_te.push(result.reflectance_te);
+        reflectance_tm.push(result.reflectance_tm);
+        phase_te.push(result.phase_shift_te_deg);
+        phase_tm.push(result.phase_shift_tm_deg);
+    }
+
+    FresnelLossySample {
+        angles_deg,
+        reflectance_te,
+        reflectance_tm,
+        phase_te,
+        phase_tm,
+    }
+}
+
+/// Sampled lossy Fresnel data for plotting.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FresnelLossySample {
+    pub angles_deg: Vec<f64>,
+    pub reflectance_te: Vec<f64>,
+    pub reflectance_tm: Vec<f64>,
+    pub phase_te: Vec<f64>,
+    pub phase_tm: Vec<f64>,
+}
+
+/// Complex square root: sqrt(a + jb)
+fn complex_sqrt(re: f64, im: f64) -> (f64, f64) {
+    let r = (re * re + im * im).sqrt();
+    let sqrt_r = r.sqrt();
+
+    if sqrt_r < 1e-15 {
+        return (0.0, 0.0);
+    }
+
+    // Use the formula: sqrt(z) = sqrt(|z|) * (z + |z|) / |z + |z||
+    let re_plus_r = re + r;
+    let mag = (re_plus_r * re_plus_r + im * im).sqrt();
+
+    if mag < 1e-15 {
+        // z is negative real, return i*sqrt(|z|)
+        return (0.0, sqrt_r);
+    }
+
+    let scale = sqrt_r / mag;
+    (re_plus_r * scale, im * scale)
+}
+
+/// Complex division: (a + jb) / (c + jd)
+fn complex_div(a: f64, b: f64, c: f64, d: f64) -> (f64, f64) {
+    let denom = c * c + d * d;
+    if denom < 1e-30 {
+        return (0.0, 0.0);
+    }
+    ((a * c + b * d) / denom, (b * c - a * d) / denom)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

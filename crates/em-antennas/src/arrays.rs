@@ -108,10 +108,193 @@ impl UniformLinearArray {
     }
 }
 
+/// Result from two-element array analysis.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TwoElementResult {
+    /// Angles in radians (0 to π)
+    pub angles: Vec<f64>,
+    /// Combined pattern in dB (element × array factor)
+    pub pattern_db: Vec<f64>,
+    /// Element pattern (linear, not dB)
+    pub element_pattern: Vec<f64>,
+    /// Array factor (linear, not dB)
+    pub array_factor: Vec<f64>,
+    /// Half-power beamwidth in degrees
+    pub beamwidth_deg: f64,
+    /// Approximate directivity
+    pub directivity: f64,
+    /// Main beam direction in degrees
+    pub main_beam_deg: f64,
+}
+
+/// Two-element antenna array analysis.
+///
+/// Combines dipole element pattern with two-element array factor.
+pub fn two_element_array(
+    element_length_wavelengths: f64,
+    spacing_wavelengths: f64,
+    phase_shift_deg: f64,
+    num_points: usize,
+) -> TwoElementResult {
+    let phase_shift = phase_shift_deg.to_radians();
+    let k = 2.0 * PI; // k = 2π/λ, and we're using wavelength units
+    let kl_half = PI * element_length_wavelengths; // kL/2
+
+    let mut angles = Vec::with_capacity(num_points);
+    let mut element_pattern = Vec::with_capacity(num_points);
+    let mut array_factor = Vec::with_capacity(num_points);
+    let mut pattern_db = Vec::with_capacity(num_points);
+
+    // Track max for finding beamwidth
+    let mut max_pattern = 0.0_f64;
+    let mut max_angle = PI / 2.0;
+
+    for i in 0..num_points {
+        let theta = PI * i as f64 / (num_points - 1) as f64;
+        angles.push(theta);
+
+        // Element pattern for thin dipole:
+        // E(θ) = [cos(kL/2 · cos(θ)) - cos(kL/2)] / sin(θ)
+        let cos_theta = theta.cos();
+        let sin_theta = theta.sin();
+
+        let e_element = if sin_theta.abs() < 1e-10 {
+            0.0
+        } else {
+            let numerator = (kl_half * cos_theta).cos() - (kl_half).cos();
+            (numerator / sin_theta).abs()
+        };
+        element_pattern.push(e_element);
+
+        // Two-element array factor:
+        // AF = 2 cos(ψ/2) where ψ = kd·cos(θ) + β
+        let psi = k * spacing_wavelengths * cos_theta + phase_shift;
+        let af = (psi / 2.0).cos().abs() * 2.0;
+        // Normalize to max of 1
+        let af_normalized = af / 2.0;
+        array_factor.push(af_normalized);
+
+        // Combined pattern
+        let combined = e_element * af_normalized;
+
+        if combined > max_pattern {
+            max_pattern = combined;
+            max_angle = theta;
+        }
+
+        // Convert to dB (handle zeros)
+        let db = if combined > 1e-10 {
+            20.0 * (combined / max_pattern.max(1e-10)).log10()
+        } else {
+            -60.0
+        };
+        pattern_db.push(db);
+    }
+
+    // Normalize dB pattern to 0 dB max
+    let max_db = pattern_db.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    for db in &mut pattern_db {
+        *db -= max_db;
+        if *db < -60.0 {
+            *db = -60.0;
+        }
+    }
+
+    // Find half-power beamwidth
+    let beamwidth_deg = find_beamwidth(&angles, &pattern_db);
+
+    // Approximate directivity for two-element array
+    // D ≈ 4 * d/λ for endfire, ≈ 2 for broadside half-wave spacing
+    let directivity = 2.0 * (1.0 + spacing_wavelengths);
+
+    TwoElementResult {
+        angles,
+        pattern_db,
+        element_pattern,
+        array_factor,
+        beamwidth_deg,
+        directivity,
+        main_beam_deg: max_angle.to_degrees(),
+    }
+}
+
+/// Thin dipole element pattern.
+///
+/// E(θ) = [cos(kL/2 · cos(θ)) - cos(kL/2)] / sin(θ)
+pub fn dipole_element_pattern(length_wavelengths: f64, theta: f64) -> f64 {
+    let kl_half = PI * length_wavelengths;
+    let cos_theta = theta.cos();
+    let sin_theta = theta.sin();
+
+    if sin_theta.abs() < 1e-10 {
+        return 0.0;
+    }
+
+    let numerator = (kl_half * cos_theta).cos() - (kl_half).cos();
+    (numerator / sin_theta).abs()
+}
+
+/// Find half-power beamwidth from dB pattern.
+fn find_beamwidth(angles: &[f64], pattern_db: &[f64]) -> f64 {
+    // Find angles where pattern crosses -3 dB
+    let mut crossings = Vec::new();
+
+    for i in 1..pattern_db.len() {
+        if (pattern_db[i - 1] + 3.0) * (pattern_db[i] + 3.0) < 0.0 {
+            // Linear interpolation to find crossing
+            let t = (pattern_db[i - 1] + 3.0) / (pattern_db[i - 1] - pattern_db[i]);
+            let angle = angles[i - 1] + t * (angles[i] - angles[i - 1]);
+            crossings.push(angle);
+        }
+    }
+
+    if crossings.len() >= 2 {
+        (crossings[1] - crossings[0]).to_degrees().abs()
+    } else if crossings.len() == 1 {
+        // Assume symmetric, double the half
+        2.0 * (PI / 2.0 - crossings[0]).to_degrees().abs()
+    } else {
+        180.0 // Full hemisphere if no crossings found
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+
+    #[test]
+    fn two_element_broadside() {
+        // Half-wave dipoles, half-wave spacing, no phase shift (broadside)
+        let result = two_element_array(0.5, 0.5, 0.0, 181);
+        // Main beam should be around 90 degrees
+        assert!((result.main_beam_deg - 90.0).abs() < 5.0);
+    }
+
+    #[test]
+    fn two_element_endfire() {
+        // For dipole elements, the element pattern has nulls at 0° and 180°.
+        // The combined pattern peak depends on both element pattern and array factor.
+        // With half-wave spacing and -180° phase shift, the array factor peak is at 0°/180°,
+        // but combined with dipole pattern (max at 90°), the result is tilted.
+        // Just verify the pattern computation runs and produces reasonable results.
+        let result = two_element_array(0.5, 0.5, -180.0, 181);
+        assert!(result.beamwidth_deg > 0.0);
+        assert!(result.directivity > 1.0);
+        // Pattern should not be flat (should have some variation)
+        let max = result.pattern_db.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let min = result.pattern_db.iter().cloned().fold(f64::INFINITY, f64::min);
+        assert!(max - min > 3.0); // At least 3dB variation
+    }
+
+    #[test]
+    fn two_element_result_sizes() {
+        let result = two_element_array(0.5, 0.5, 0.0, 361);
+        assert_eq!(result.angles.len(), 361);
+        assert_eq!(result.pattern_db.len(), 361);
+        assert_eq!(result.element_pattern.len(), 361);
+        assert_eq!(result.array_factor.len(), 361);
+    }
 
     #[test]
     fn broadside_peak_at_90() {

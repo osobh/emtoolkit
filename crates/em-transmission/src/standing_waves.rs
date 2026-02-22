@@ -157,10 +157,183 @@ impl StandingWaveParams {
     }
 }
 
+/// Standing wave result data structure for WASM bindings.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StandingWaveData {
+    /// Positions along line (m)
+    pub positions: Vec<f64>,
+    /// Voltage magnitude at each position
+    pub voltage_mag: Vec<f64>,
+    /// Current magnitude at each position
+    pub current_mag: Vec<f64>,
+    /// VSWR value
+    pub vswr: f64,
+    /// Reflection coefficient magnitude
+    pub gamma_mag: f64,
+    /// Reflection coefficient angle (radians)
+    pub gamma_angle: f64,
+    /// Voltage maximum
+    pub v_max: f64,
+    /// Voltage minimum
+    pub v_min: f64,
+    /// Distance to first voltage minimum
+    pub d_to_first_min: f64,
+    /// Distance to first voltage maximum
+    pub d_to_first_max: f64,
+}
+
+/// Compute standing wave pattern from VSWR and reflection coefficient angle.
+///
+/// This allows users to specify VSWR directly instead of load impedance.
+///
+/// # Arguments
+/// * `_z0` - Characteristic impedance (Ω) - reserved for future use
+/// * `vswr` - Voltage standing wave ratio (≥ 1.0)
+/// * `gamma_angle_deg` - Reflection coefficient angle in degrees
+/// * `frequency` - Operating frequency (Hz)
+/// * `line_length` - Length of line to analyze (m)
+/// * `num_points` - Number of sample points
+pub fn pattern_from_vswr(
+    _z0: f64,
+    vswr: f64,
+    gamma_angle_deg: f64,
+    frequency: f64,
+    line_length: f64,
+    num_points: usize,
+) -> StandingWaveData {
+    assert!(vswr >= 1.0, "VSWR must be >= 1.0");
+    assert!(num_points >= 2);
+
+    // Convert VSWR to |Γ|
+    let gamma_mag = (vswr - 1.0) / (vswr + 1.0);
+    let gamma_angle = gamma_angle_deg.to_radians();
+
+    // Construct Γ_L
+    let gamma_l = Complex64::from_polar(gamma_mag, gamma_angle);
+
+    // Calculate β = ω/v = 2πf/c (assuming free space or specify v)
+    let beta = 2.0 * PI * frequency / em_core::constants::C_0;
+
+    let mut positions = Vec::with_capacity(num_points);
+    let mut voltage_mag = Vec::with_capacity(num_points);
+    let mut current_mag = Vec::with_capacity(num_points);
+
+    let one = Complex64::new(1.0, 0.0);
+    let dd = line_length / (num_points - 1) as f64;
+
+    for i in 0..num_points {
+        let d = i as f64 * dd;
+        positions.push(d);
+
+        // |V(d)| = |1 + Γ_L · e^(-j2βd)|
+        let phase = Complex64::from_polar(1.0, -2.0 * beta * d);
+        let v = (one + gamma_l * phase).norm();
+        voltage_mag.push(v);
+
+        // |I(d)| = |1 - Γ_L · e^(-j2βd)|
+        let i_mag = (one - gamma_l * phase).norm();
+        current_mag.push(i_mag);
+    }
+
+    // Calculate V_max and V_min
+    let v_max = 1.0 + gamma_mag;
+    let v_min = 1.0 - gamma_mag;
+
+    // Distance to first voltage minimum
+    // V_min occurs where phase of Γ_L·e^{-j2βd} = π (destructive)
+    // γ - 2βd = π → d = (γ - π)/(2β)
+    let d_to_first_min = (gamma_angle - PI) / (-2.0 * beta);
+    let d_to_first_min = if d_to_first_min < 0.0 {
+        d_to_first_min + PI / beta // Add λ/2
+    } else {
+        d_to_first_min
+    };
+
+    // Distance to first voltage maximum
+    // V_max occurs where phase = 0 (constructive)
+    // γ - 2βd = 0 → d = γ/(2β)
+    let d_to_first_max = gamma_angle / (2.0 * beta);
+    let d_to_first_max = if d_to_first_max < 0.0 {
+        d_to_first_max + PI / beta
+    } else if d_to_first_max == 0.0 && gamma_angle == 0.0 {
+        0.0
+    } else {
+        d_to_first_max
+    };
+
+    StandingWaveData {
+        positions,
+        voltage_mag,
+        current_mag,
+        vswr,
+        gamma_mag,
+        gamma_angle,
+        v_max,
+        v_min,
+        d_to_first_min,
+        d_to_first_max,
+    }
+}
+
+/// Get standing wave data from load impedance (wrapper for WASM).
+pub fn pattern_from_load(
+    z0: f64,
+    zl_re: f64,
+    zl_im: f64,
+    frequency: f64,
+    line_length: f64,
+    num_points: usize,
+) -> StandingWaveData {
+    let zl = Complex64::new(zl_re, zl_im);
+    let sw = StandingWaveParams::in_free_space(z0, zl, frequency, line_length);
+
+    let (positions, voltage_mag) = sw.sample_voltage(num_points);
+    let (_, current_mag) = sw.sample_current(num_points);
+    let gamma_l = sw.gamma_load();
+
+    StandingWaveData {
+        positions,
+        voltage_mag,
+        current_mag,
+        vswr: sw.vswr(),
+        gamma_mag: gamma_l.norm(),
+        gamma_angle: gamma_l.arg(),
+        v_max: 1.0 + gamma_l.norm(),
+        v_min: 1.0 - gamma_l.norm(),
+        d_to_first_min: sw.first_voltage_minimum(),
+        d_to_first_max: sw.first_voltage_maximum(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+
+    #[test]
+    fn test_vswr_pattern_matched() {
+        let data = pattern_from_vswr(50.0, 1.0, 0.0, 1e9, 1.0, 100);
+        assert_relative_eq!(data.gamma_mag, 0.0, epsilon = 1e-12);
+        for v in &data.voltage_mag {
+            assert_relative_eq!(*v, 1.0, epsilon = 1e-10);
+        }
+    }
+
+    #[test]
+    fn test_vswr_to_gamma() {
+        let data = pattern_from_vswr(50.0, 3.0, 0.0, 1e9, 1.0, 100);
+        // VSWR = 3 → |Γ| = (3-1)/(3+1) = 0.5
+        assert_relative_eq!(data.gamma_mag, 0.5, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_vswr_pattern_minmax() {
+        let data = pattern_from_vswr(50.0, 2.0, 0.0, 1e9, 1.0, 1000);
+        // |Γ| = (2-1)/(2+1) = 1/3
+        // V_max = 1 + 1/3 = 4/3, V_min = 1 - 1/3 = 2/3
+        assert_relative_eq!(data.v_max, 4.0 / 3.0, epsilon = 1e-10);
+        assert_relative_eq!(data.v_min, 2.0 / 3.0, epsilon = 1e-10);
+    }
 
     fn make_test_line() -> StandingWaveParams {
         // 50Ω line, 100Ω resistive load, 1 GHz, 1m length

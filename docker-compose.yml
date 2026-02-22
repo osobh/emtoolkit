@@ -1,0 +1,18 @@
+services:
+  emtoolkit:
+    build: .
+    container_name: emtoolkit
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    expose:
+      - "80"
+    networks:
+      - proxy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+networks:
+  proxy:
+    external: true
+    name: shared-proxy

@@ -7,6 +7,12 @@ export function SmithChartModule() {
   const [zlIm, setZlIm] = useState(50);
   const [z0, setZ0] = useState(50);
   const [traceLength, setTraceLength] = useState(Math.PI);
+  
+  // Lossy mode controls
+  const [lossyMode, setLossyMode] = useState(false);
+  const [alpha, setAlpha] = useState(0.1); // Np/m
+  const [lineLength, setLineLength] = useState(1.0); // meters
+  const [frequency, setFrequency] = useState(1.0); // GHz
 
   const zNormRe = zlRe / z0;
   const zNormIm = zlIm / z0;
@@ -20,6 +26,15 @@ export function SmithChartModule() {
   const trace = useMemo(() => {
     return wasm.smith_chart_trace(zNormRe, zNormIm, traceLength, 200);
   }, [zNormRe, zNormIm, traceLength]);
+
+  // Lossy trace (spiral inward)
+  const lossyTrace = useMemo(() => {
+    if (!lossyMode) return null;
+    // β = 2π / λ = 2πf/v_p ≈ 2πf·√(ε_eff)/c
+    // For simplicity, assume v_p ≈ c (free space)
+    const beta = 2 * Math.PI * frequency * 1e9 / 3e8;
+    return wasm.smith_chart_lossy_trace(zNormRe, zNormIm, alpha, beta, lineLength, 500);
+  }, [lossyMode, zNormRe, zNormIm, alpha, frequency, lineLength]);
 
   // Unit circle
   const unitCircle = useMemo(() => {
@@ -49,15 +64,64 @@ export function SmithChartModule() {
             onChange={e => setTraceLength(+e.target.value)} />
           <span>{(traceLength / Math.PI).toFixed(2)}π</span>
         </div>
+        
+        <div className="control-group" style={{ marginTop: '15px', borderTop: '1px solid #ddd', paddingTop: '10px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input 
+              type="checkbox" 
+              checked={lossyMode} 
+              onChange={e => setLossyMode(e.target.checked)} 
+            />
+            <strong>Lossy Mode</strong> (spiral trace)
+          </label>
+        </div>
+        
+        {lossyMode && (
+          <>
+            <div className="control-group">
+              <label>α (attenuation, Np/m)</label>
+              <input type="range" min={0.01} max={1.0} step={0.01} value={alpha}
+                onChange={e => setAlpha(+e.target.value)} />
+              <span>{alpha.toFixed(2)}</span>
+            </div>
+            <div className="control-group">
+              <label>Line length (m)</label>
+              <input type="range" min={0.1} max={5.0} step={0.1} value={lineLength}
+                onChange={e => setLineLength(+e.target.value)} />
+              <span>{lineLength.toFixed(1)}</span>
+            </div>
+            <div className="control-group">
+              <label>Frequency (GHz)</label>
+              <input type="range" min={0.1} max={10.0} step={0.1} value={frequency}
+                onChange={e => setFrequency(+e.target.value)} />
+              <span>{frequency.toFixed(1)}</span>
+            </div>
+          </>
+        )}
       </div>
 
       <Plot
         data={[
           { x: unitCircle.x, y: unitCircle.y, mode: 'lines', line: { color: '#ccc', width: 1 }, showlegend: false, hoverinfo: 'skip' },
           { x: swrCircle.x, y: swrCircle.y, mode: 'lines', line: { color: '#4ecdc4', width: 2, dash: 'dot' }, name: `SWR=${point.vswr.toFixed(2)}` },
-          { x: trace.gamma_re, y: trace.gamma_im, mode: 'lines', line: { color: '#ff6b6b', width: 2 }, name: 'Toward Generator' },
-          { x: [point.gamma_re], y: [point.gamma_im], mode: 'markers', marker: { size: 12, color: '#e63946' }, name: `Γ = ${point.gamma_mag.toFixed(3)}∠${point.gamma_phase_deg.toFixed(1)}°` },
-        ]}
+          !lossyMode && { x: trace.gamma_re, y: trace.gamma_im, mode: 'lines', line: { color: '#ff6b6b', width: 2 }, name: 'Toward Generator (lossless)' },
+          lossyMode && lossyTrace && { 
+            x: lossyTrace.gamma_re, 
+            y: lossyTrace.gamma_im, 
+            mode: 'lines', 
+            line: { color: '#9C27B0', width: 2 }, 
+            name: `Lossy Spiral (α=${alpha} Np/m)` 
+          },
+          { x: [point.gamma_re], y: [point.gamma_im], mode: 'markers', marker: { size: 12, color: '#e63946' }, name: `Γ_L = ${point.gamma_mag.toFixed(3)}∠${point.gamma_phase_deg.toFixed(1)}°` },
+          // Mark the end point of lossy trace
+          lossyMode && lossyTrace && lossyTrace.gamma_re.length > 0 && {
+            x: [lossyTrace.gamma_re[lossyTrace.gamma_re.length - 1]],
+            y: [lossyTrace.gamma_im[lossyTrace.gamma_im.length - 1]],
+            mode: 'markers',
+            marker: { size: 10, color: '#4CAF50', symbol: 'diamond' },
+            name: 'Γ_in (at source)'
+          },
+        ].filter(Boolean)}
         layout={{
           width: 600, height: 600,
           xaxis: { range: [-1.2, 1.2], scaleanchor: 'y', title: { text: 'Re(Γ)' } },

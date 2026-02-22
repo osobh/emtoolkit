@@ -262,6 +262,112 @@ impl MicrostripLine {
     }
 }
 
+/// Stripline geometry and parameters.
+///
+/// Stripline is a conductor strip sandwiched between two ground planes,
+/// providing TEM propagation with no dispersion.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct StriplineLine {
+    /// Strip width (m)
+    pub width: f64,
+    /// Ground plane spacing (m) - total height between ground planes
+    pub ground_spacing: f64,
+    /// Relative permittivity of dielectric fill
+    pub epsilon_r: f64,
+    /// Strip thickness (m), 0 for infinitely thin
+    pub thickness: f64,
+}
+
+impl StriplineLine {
+    /// Create a stripline with zero-thickness strip.
+    pub fn new(width: f64, ground_spacing: f64, epsilon_r: f64) -> Self {
+        Self {
+            width,
+            ground_spacing,
+            epsilon_r,
+            thickness: 0.0,
+        }
+    }
+
+    /// Create a stripline with finite strip thickness.
+    pub fn with_thickness(width: f64, ground_spacing: f64, epsilon_r: f64, thickness: f64) -> Self {
+        Self {
+            width,
+            ground_spacing,
+            epsilon_r,
+            thickness,
+        }
+    }
+
+    /// Effective relative permittivity.
+    ///
+    /// For stripline, the field is fully enclosed in the dielectric,
+    /// so ε_eff = ε_r (no fringing adjustment needed).
+    pub fn effective_epsilon_r(&self) -> f64 {
+        self.epsilon_r
+    }
+
+    /// Characteristic impedance using stripline formulas (Ω).
+    ///
+    /// Uses Wheeler's formula which provides good accuracy across all w/b ratios:
+    /// Z₀ = (30·π/√εr) · b / (w_e + 0.441·b)
+    ///
+    /// For narrow strips (w/b < 0.35), a more accurate formula is:
+    /// Z₀ = (60/√εr) · ln(4b/(π·w_e) + 1)
+    ///
+    /// where w_e is the effective width accounting for thickness.
+    pub fn characteristic_impedance(&self) -> f64 {
+        let b = self.ground_spacing;
+        
+        // Effective width accounting for strip thickness
+        // w_e ≈ w + (t/π)·(1 + ln(4πw/t)) for t > 0, simplified
+        let w_e = if self.thickness > 0.0 && self.thickness < b {
+            let t = self.thickness;
+            // Cohn's correction for finite thickness
+            let delta_w = (t / PI) * (1.0 + (4.0 * PI * self.width / t).ln());
+            self.width + delta_w.min(0.5 * self.width) // limit correction
+        } else {
+            self.width
+        };
+
+        let ratio = w_e / b;
+        let sqrt_er = self.epsilon_r.sqrt();
+
+        if ratio < 0.35 {
+            // Narrow strip formula (Cohn)
+            // Z₀ = (60/√εr) · ln(4b/(π·w_e) + 1)
+            let arg = 4.0 * b / (PI * w_e);
+            (60.0 / sqrt_er) * (arg + 1.0).ln()
+        } else {
+            // Wide strip formula (Wheeler)
+            // Z₀ = (30·π/√εr) · b / (w_e + 0.441·b)
+            (30.0 * PI / sqrt_er) * b / (w_e + 0.441 * b)
+        }
+    }
+
+    /// Phase velocity in the stripline (m/s).
+    ///
+    /// v_p = c₀/√εr (no dispersion in stripline)
+    pub fn phase_velocity(&self) -> f64 {
+        constants::C_0 / self.epsilon_r.sqrt()
+    }
+
+    /// Compute approximate per-unit-length parameters (lossless).
+    pub fn parameters(&self) -> LineParameters {
+        let z0 = self.characteristic_impedance();
+        let v_p = self.phase_velocity();
+        let l_per_m = z0 / v_p;
+        let c_per_m = 1.0 / (z0 * v_p);
+
+        LineParameters {
+            r_per_m: 0.0,
+            l_per_m,
+            g_per_m: 0.0,
+            c_per_m,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -480,6 +586,68 @@ mod tests {
         let p = ms.parameters();
         let z0_from_params = p.z0_lossless();
         let z0_direct = ms.characteristic_impedance();
+        assert_relative_eq!(z0_from_params, z0_direct, max_relative = 1e-6);
+    }
+
+    // ================================================================
+    // Stripline tests
+    // ================================================================
+
+    #[test]
+    fn stripline_narrow_formula() {
+        // For narrow strip (w/b < 0.35), use the narrow formula
+        let sl = StriplineLine::new(0.3e-3, 2.0e-3, 4.0);
+        let z0 = sl.characteristic_impedance();
+        // Should be > 50Ω for narrow strip
+        assert!(z0 > 30.0);
+        assert!(z0 < 200.0);
+    }
+
+    #[test]
+    fn stripline_wide_formula() {
+        // For wide strip (w/b > 0.35), use the wide formula
+        let sl = StriplineLine::new(3.0e-3, 2.0e-3, 4.0);
+        let z0 = sl.characteristic_impedance();
+        // Wide strip should have lower impedance
+        assert!(z0 > 5.0);
+        assert!(z0 < 100.0);
+    }
+
+    #[test]
+    fn stripline_effective_epsilon_equals_substrate() {
+        // Stripline is fully enclosed, so ε_eff = ε_r
+        let sl = StriplineLine::new(1e-3, 2e-3, 4.0);
+        assert_relative_eq!(sl.effective_epsilon_r(), 4.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn stripline_phase_velocity() {
+        let sl = StriplineLine::new(1e-3, 2e-3, 4.0);
+        let vp = sl.phase_velocity();
+        // v_p = c/√εr
+        assert_relative_eq!(vp, constants::C_0 / 2.0, max_relative = 1e-6);
+    }
+
+    #[test]
+    fn stripline_wider_strip_lower_z0() {
+        let narrow = StriplineLine::new(0.5e-3, 2e-3, 4.0);
+        let wide = StriplineLine::new(2.0e-3, 2e-3, 4.0);
+        assert!(wide.characteristic_impedance() < narrow.characteristic_impedance());
+    }
+
+    #[test]
+    fn stripline_higher_epsilon_lower_z0() {
+        let low_eps = StriplineLine::new(1e-3, 2e-3, 2.0);
+        let high_eps = StriplineLine::new(1e-3, 2e-3, 8.0);
+        assert!(high_eps.characteristic_impedance() < low_eps.characteristic_impedance());
+    }
+
+    #[test]
+    fn stripline_parameters_consistent() {
+        let sl = StriplineLine::new(1e-3, 2e-3, 4.0);
+        let p = sl.parameters();
+        let z0_from_params = p.z0_lossless();
+        let z0_direct = sl.characteristic_impedance();
         assert_relative_eq!(z0_from_params, z0_direct, max_relative = 1e-6);
     }
 }
